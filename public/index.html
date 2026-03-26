@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 日程提醒</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      color: white;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .card h2 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 1.5em;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #555;
+      font-weight: 500;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 1em;
+      font-family: inherit;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: 600;
+      transition: background 0.3s;
+      width: 100%;
+    }
+
+    button:hover {
+      background: #5568d3;
+    }
+
+    button.secondary {
+      background: #6c757d;
+      margin-top: 10px;
+    }
+
+    button.secondary:hover {
+      background: #5a6268;
+    }
+
+    button.danger {
+      background: #dc3545;
+      padding: 6px 12px;
+      font-size: 0.9em;
+      width: auto;
+    }
+
+    button.danger:hover {
+      background: #c82333;
+    }
+
+    .tasks-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .task-item {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+      transition: 0.3s;
+    }
+
+    .task-item:hover {
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .task-item.completed {
+      opacity: 0.6;
+      border-left-color: #28a745;
+    }
+
+    .task-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .task-title {
+      font-size: 1.1em;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .task-priority {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      font-weight: 600;
+    }
+
+    .priority-1 {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .priority-2 {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .priority-3 {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .task-meta {
+      display: flex;
+      gap: 10px;
+      font-size: 0.9em;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .task-category {
+      background: #e7f3ff;
+      padding: 3px 8px;
+      border-radius: 4px;
+      color: #0066cc;
+    }
+
+    .task-time {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .task-description {
+      color: #555;
+      font-size: 0.95em;
+      margin-bottom: 10px;
+    }
+
+    .task-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .task-actions button {
+      flex: 1;
+      min-width: 80px;
+      padding: 6px 12px;
+      font-size: 0.9em;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      font-weight: 600;
+    }
+
+    .status-pending {
+      background: #ffc107;
+      color: #000;
+    }
+
+    .status-completed {
+      background: #28a745;
+      color: white;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+    }
+
+    .empty-state svg {
+      width: 60px;
+      height: 60px;
+      margin-bottom: 15px;
+      opacity: 0.5;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 2em;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      font-size: 0.9em;
+      opacity: 0.9;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #999;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .main {
+        grid-template-columns: 1fr;
+      }
+
+      header h1 {
+        font-size: 1.8em;
+      }
+
+      .stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📌 AI 日程提醒</h1>
+      <p>让AI帮你规划每一天，不错过任何重要的内容创作任务</p>
+    </header>
+
+    <div class="main">
+      <!-- 左侧：创建任务表单 -->
+      <div class="card">
+        <h2>📝 创建新任务</h2>
+        <form id="taskForm">
+          <div class="form-group">
+            <label for="title">任务标题 *</label>
+            <input type="text" id="title" placeholder="例如：拍摄抖音视频" required>
+          </div>
+
+          <div class="form-group">
+            <label for="description">任务描述</label>
+            <textarea id="description" placeholder="详细描述你要做的事情..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="category">分类</label>
+            <select id="category">
+              <option value="内容创作">内容创作</option>
+              <option value="素材准备">素材准备</option>
+              <option value="视频剪辑">视频剪辑</option>
+              <option value="直播">直播</option>
+              <option value="数据分析">数据分析</option>
+              <option value="互动运营">互动运营</option>
+              <option value="其他">其他</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="priority">优先级</label>
+            <select id="priority">
+              <option value="1">低</option>
+              <option value="2" selected>中</option>
+              <option value="3">高</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="targetTime">计划完成时间</label>
+            <input type="datetime-local" id="targetTime">
+          </div>
+
+          <button type="submit">➕ 添加任务</button>
+        </form>
+      </div>
+
+      <!-- 右侧：任务列表 -->
+      <div class="card">
+        <h2>📋 今日任务</h2>
+
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-number" id="totalTasks">0</div>
+            <div class="stat-label">总任务</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="completedTasks">0</div>
+            <div class="stat-label">已完成</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="pendingTasks">0</div>
+            <div class="stat-label">待处理</div>
+          </div>
+        </div>
+
+        <div id="tasksList" class="tasks-list">
+          <div class="empty-state">
+            <p>暂无任务，开始创建你的第一个任务吧！</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3000/api';
+
+    // DOM 元素
+    const taskForm = document.getElementById('taskForm');
+    const titleInput = document.getElementById('title');
+    const descriptionInput = document.getElementById('description');
+    const categorySelect = document.getElementById('category');
+    const prioritySelect = document.getElementById('priority');
+    const targetTimeInput = document.getElementById('targetTime');
+    const tasksList = document.getElementById('tasksList');
+    const totalTasksEl = document.getElementById('totalTasks');
+    const completedTasksEl = document.getElementById('completedTasks');
+    const pendingTasksEl = document.getElementById('pendingTasks');
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      loadTasks();
+      // 设置默认时间为2小时后
+      const now = new Date();
+      now.setHours(now.getHours() + 2);
+      targetTimeInput.value = now.toISOString().slice(0, 16);
+
+      // 每30秒刷新一次任务列表
+      setInterval(loadTasks, 30000);
+    });
+
+    // 加载任务列表
+    async function loadTasks() {
+      try {
+        const response = await fetch(`${API_BASE}/tasks`);
+        const tasks = await response.json();
+        renderTasks(tasks);
+        updateStats(tasks);
+      } catch (error) {
+        console.error('加载任务失败:', error);
+      }
+    }
+
+    // 渲染任务列表
+    function renderTasks(tasks) {
+      if (tasks.length === 0) {
+        tasksList.innerHTML = `
+          <div class="empty-state">
+            <p>暂无任务，开始创建你的第一个任务吧！</p>
+          </div>
+        `;
+        return;
+      }
+
+      tasksList.innerHTML = tasks.map(task => `
+        <div class="task-item ${task.status === 'completed' ? 'completed' : ''}">
+          <div class="task-header">
+            <div class="task-title">${escapeHtml(task.title)}</div>
+            <span class="task-priority priority-${task.priority}">${getPriorityLabel(task.priority)}</span>
+          </div>
+
+          <div class="task-meta">
+            <span class="task-category">${escapeHtml(task.category)}</span>
+            ${task.target_time ? `
+              <span class="task-time">
+                🕐 ${new Date(task.target_time).toLocaleString('zh-CN')}
+              </span>
+            ` : ''}
+            <span class="status-badge status-${task.status}">${getStatusLabel(task.status)}</span>
+          </div>
+
+          ${task.description ? `<div class="task-description">${escapeHtml(task.description)}</div>` : ''}
+
+          <div class="task-actions">
+            ${task.status !== 'completed' ? `
+              <button class="secondary" onclick="remindTask('${task.id}')">🔔 提醒我</button>
+              <button class="secondary" onclick="completeTask('${task.id}')">✓ 完成</button>
+            ` : ''}
+            <button class="danger" onclick="deleteTask('${task.id}')">🗑 删除</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 更新统计信息
+    function updateStats(tasks) {
+      const completed = tasks.filter(t => t.status === 'completed').length;
+      const pending = tasks.filter(t => t.status === 'pending').length;
+
+      totalTasksEl.textContent = tasks.length;
+      completedTasksEl.textContent = completed;
+      pendingTasksEl.textContent = pending;
+    }
+
+    // 创建任务
+    taskForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const task = {
+        title: titleInput.value,
+        description: descriptionInput.value,
+        category: categorySelect.value,
+        priority: parseInt(prioritySelect.value),
+        target_time: targetTimeInput.value ? new Date(targetTimeInput.value).toISOString() : null,
+      };
+
+      try {
+        const response = await fetch(`${API_BASE}/tasks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(task),
+        });
+
+        if (response.ok) {
+          taskForm.reset();
+          const now = new Date();
+          now.setHours(now.getHours() + 2);
+          targetTimeInput.value = now.toISOString().slice(0, 16);
+          await loadTasks();
+          showNotification('✅ 任务创建成功！');
+        }
+      } catch (error) {
+        console.error('创建任务失败:', error);
+        showNotification('❌ 创建失败');
+      }
+    });
+
+    // 完成任务
+    async function completeTask(taskId) {
+      try {
+        await fetch(`${API_BASE}/tasks/${taskId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'completed' }),
+        });
+        await loadTasks();
+        showNotification('✅ 任务已完成');
+      } catch (error) {
+        console.error('完成任务失败:', error);
+      }
+    }
+
+    // 提醒任务
+    async function remindTask(taskId) {
+      try {
+        const response = await fetch(`${API_BASE}/tasks/${taskId}/remind`, {
+          method: 'POST',
+        });
+        const result = await response.json();
+        if (result.success) {
+          showNotification('🔔 AI提醒已发送');
+        }
+      } catch (error) {
+        console.error('发送提醒失败:', error);
+      }
+    }
+
+    // 删除任务
+    async function deleteTask(taskId) {
+      if (!confirm('确定要删除这个任务吗？')) return;
+
+      try {
+        await fetch(`${API_BASE}/tasks/${taskId}`, {
+          method: 'DELETE',
+        });
+        await loadTasks();
+        showNotification('✅ 任务已删除');
+      } catch (error) {
+        console.error('删除任务失败:', error);
+      }
+    }
+
+    // 工具函数
+    function getPriorityLabel(priority) {
+      const labels = { 1: '低', 2: '中', 3: '高' };
+      return labels[priority] || '中';
+    }
+
+    function getStatusLabel(status) {
+      const labels = { pending: '待处理', completed: '已完成' };
+      return labels[status] || status;
+    }
+
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function showNotification(message) {
+      const div = document.createElement('div');
+      div.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        z-index: 9999;
+        animation: slideIn 0.3s ease;
+      `;
+      div.textContent = message;
+      document.body.appendChild(div);
+
+      setTimeout(() => div.remove(), 3000);
+    }
+
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>

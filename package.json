@@ -1,0 +1,32 @@
+{
+  "name": "ai-daily-reminder",
+  "version": "1.0.0",
+  "description": "AI-powered daily task reminder system for social media creators",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "setup": "node scripts/setup.js"
+  },
+  "keywords": [
+    "ai",
+    "reminder",
+    "task-management",
+    "productivity"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "node-notifier": "^10.0.1",
+    "openai": "^4.50.0",
+    "sqlite3": "^5.1.7",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
