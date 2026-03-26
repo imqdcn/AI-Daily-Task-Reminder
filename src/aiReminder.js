@@ -4,7 +4,74 @@ const { v4: uuidv4 } = require('uuid');
 const { addReminder } = require('./db');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+const MAX_RETRIES = 2;
+const RETRY_BASE_DELAY_MS = 800;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableGeminiError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  const causeMessage = String(error?.cause?.message || '').toLowerCase();
+  return (
+    message.includes('fetch failed') ||
+    message.includes('etimedout') ||
+    message.includes('econnreset') ||
+    message.includes('enotfound') ||
+    causeMessage.includes('fetch failed') ||
+    causeMessage.includes('etimedout') ||
+    causeMessage.includes('econnreset') ||
+    causeMessage.includes('enotfound')
+  );
+}
+
+function logGeminiError(error, attempt) {
+  const status = error?.status || error?.response?.status;
+  const details = error?.errorDetails || error?.response?.data;
+  console.error(`[Gemini] 第 ${attempt} 次请求失败`);
+  if (status) console.error('[Gemini] HTTP状态码:', status);
+  if (error?.message) console.error('[Gemini] 错误消息:', error.message);
+  if (error?.cause?.message) console.error('[Gemini] 根因:', error.cause.message);
+  if (details) console.error('[Gemini] 详细信息:', details);
+}
+
+async function requestGeminiContent(promptText) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
+    try {
+      const result = await model.generateContent({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: promptText }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 300,
+        },
+      });
+
+      return result.response.text();
+    } catch (error) {
+      lastError = error;
+      logGeminiError(error, attempt);
+
+      const canRetry = attempt <= MAX_RETRIES && isRetryableGeminiError(error);
+      if (!canRetry) break;
+
+      const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+      console.warn(`[Gemini] 网络波动，${delay}ms 后重试...`);
+      await sleep(delay);
+    }
+  }
+
+  throw lastError;
+}
 
 /**
  * 根据任务生成AI提醒
@@ -31,24 +98,13 @@ async function generateAIReminder(task) {
 [资源建议]
     `;
 
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              text: `系统提示：你是一个专业的社媒内容创作助手，提供实用的日程管理和内容创意建议。\n\n${prompt}`,
-            },
-          ],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 300,
-      },
-    });
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY 未配置');
+    }
 
-    const content = result.response.text();
+    const content = await requestGeminiContent(
+      `系统提示：你是一个专业的社媒内容创作助手，提供实用的日程管理和内容创意建议。\n\n${prompt}`
+    );
     const parts = content.split('\n[');
     
     return {
@@ -57,7 +113,7 @@ async function generateAIReminder(task) {
       resources: parts[2]?.split(']')?.[0] || '根据需要查阅相关资源',
     };
   } catch (error) {
-    console.error('AI提醒生成失败:', error);
+    console.error('AI提醒生成失败，启用兜底文案:', error?.message || error);
     return {
       reminder: `提醒：${task.title}`,
       suggestion: task.description || '开始完成这项任务',
