@@ -119,20 +119,48 @@ app.post('/api/tasks/:id/remind', async (req, res) => {
 });
 
 /**
- * 更新任务状态
+ * 更新任务（状态或内容）
  */
 app.patch('/api/tasks/:id', async (req, res) => {
   try {
-    const { status } = req.body;
+    const allowedFields = ['title', 'description', 'category', 'priority', 'target_time', 'status'];
+    const updates = {};
 
-    if (!status) {
-      return res.status(400).json({ error: '状态不能为空' });
+    for (const field of allowedFields) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        updates[field] = req.body[field];
+      }
     }
 
-    const updates = {
-      status,
-      ...(status === 'completed' && { completed_at: new Date().toISOString() }),
-    };
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: '没有可更新的字段' });
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'status')) {
+      if (!['pending', 'completed'].includes(updates.status)) {
+        return res.status(400).json({ error: '状态值无效' });
+      }
+
+      if (updates.status === 'completed') {
+        updates.completed_at = new Date().toISOString();
+      }
+
+      if (updates.status === 'pending') {
+        updates.completed_at = null;
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'priority')) {
+      const priorityNum = Number(updates.priority);
+      if (!Number.isInteger(priorityNum) || priorityNum < 1 || priorityNum > 3) {
+        return res.status(400).json({ error: '优先级必须是 1-3 的整数' });
+      }
+      updates.priority = priorityNum;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'title') && !String(updates.title).trim()) {
+      return res.status(400).json({ error: '任务标题不能为空' });
+    }
 
     const result = await updateTask(req.params.id, updates);
     res.json(result);

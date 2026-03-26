@@ -471,7 +471,11 @@
             ${task.status !== 'completed' ? `
               <button class="secondary" onclick="remindTask('${task.id}')">🔔 提醒我</button>
               <button class="secondary" onclick="completeTask('${task.id}')">✓ 完成</button>
-            ` : ''}
+              <button class="secondary" onclick="editTask('${task.id}')">✏️ 编辑</button>
+            ` : `
+              <button class="secondary" onclick="restoreTask('${task.id}')">↩️ 恢复</button>
+              <button class="secondary" onclick="editTask('${task.id}')">✏️ 编辑</button>
+            `}
             <button class="danger" onclick="deleteTask('${task.id}')">🗑 删除</button>
           </div>
         </div>
@@ -533,6 +537,92 @@
         showNotification('✅ 任务已完成');
       } catch (error) {
         console.error('完成任务失败:', error);
+      }
+    }
+
+    // 恢复任务为未完成
+    async function restoreTask(taskId) {
+      try {
+        await fetch(`${API_BASE}/tasks/${taskId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'pending' }),
+        });
+        await loadTasks();
+        showNotification('↩️ 任务已恢复为待处理');
+      } catch (error) {
+        console.error('恢复任务失败:', error);
+        showNotification('❌ 恢复失败');
+      }
+    }
+
+    // 编辑任务
+    async function editTask(taskId) {
+      try {
+        const response = await fetch(`${API_BASE}/tasks?status=all`);
+        const tasks = await response.json();
+        const task = tasks.find(t => t.id === taskId);
+
+        if (!task) {
+          showNotification('❌ 任务不存在');
+          return;
+        }
+
+        const nextTitle = prompt('编辑任务标题', task.title);
+        if (nextTitle === null) return;
+        const title = nextTitle.trim();
+        if (!title) {
+          showNotification('❌ 标题不能为空');
+          return;
+        }
+
+        const description = prompt('编辑任务描述', task.description || '');
+        if (description === null) return;
+
+        const category = prompt('编辑任务分类', task.category || '其他');
+        if (category === null) return;
+
+        const priorityInput = prompt('编辑优先级（1=低, 2=中, 3=高）', String(task.priority || 2));
+        if (priorityInput === null) return;
+        const priority = Number(priorityInput);
+        if (!Number.isInteger(priority) || priority < 1 || priority > 3) {
+          showNotification('❌ 优先级必须是 1-3');
+          return;
+        }
+
+        const targetTimeInput = prompt(
+          '编辑计划时间（格式：YYYY-MM-DDTHH:mm:ss.sssZ）',
+          task.target_time || ''
+        );
+        if (targetTimeInput === null) return;
+
+        let target_time = null;
+        if (targetTimeInput.trim()) {
+          const date = new Date(targetTimeInput.trim());
+          if (Number.isNaN(date.getTime())) {
+            showNotification('❌ 时间格式无效');
+            return;
+          }
+          target_time = date.toISOString();
+        }
+
+        await fetch(`${API_BASE}/tasks/${taskId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            description,
+            category,
+            priority,
+            target_time,
+          }),
+        });
+
+        await loadTasks();
+        showNotification('✏️ 任务已更新');
+      } catch (error) {
+        console.error('编辑任务失败:', error);
+        showNotification('❌ 编辑失败');
       }
     }
 
