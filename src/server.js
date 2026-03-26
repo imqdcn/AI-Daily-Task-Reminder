@@ -44,11 +44,12 @@ function startReminderCheck() {
 // API 路由
 
 /**
- * 获取所有待处理任务
+ * 获取任务列表（可按状态筛选）
  */
 app.get('/api/tasks', async (req, res) => {
   try {
-    const tasks = await getTasks('pending');
+    const status = req.query.status;
+    const tasks = await getTasks(status);
     res.json(tasks);
   } catch (error) {
     console.error('获取任务失败:', error);

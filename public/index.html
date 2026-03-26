@@ -428,7 +428,7 @@
     // 加载任务列表
     async function loadTasks() {
       try {
-        const response = await fetch(`${API_BASE}/tasks`);
+        const response = await fetch(`${API_BASE}/tasks?status=all`);
         const tasks = await response.json();
         renderTasks(tasks);
         updateStats(tasks);
