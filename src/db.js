@@ -78,7 +78,7 @@ function getTasks(status) {
   return new Promise((resolve, reject) => {
     if (!status || status === 'all') {
       db.all(
-        `SELECT * FROM tasks ORDER BY CASE WHEN status = 'pending' THEN 0 ELSE 1 END, priority DESC, target_time ASC`,
+        `SELECT * FROM tasks ORDER BY CASE WHEN status = 'pending' THEN 0 WHEN status = 'paused' THEN 1 ELSE 2 END, priority DESC, target_time ASC`,
         [],
         (err, rows) => {
           if (err) reject(err);

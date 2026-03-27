@@ -237,6 +237,11 @@
       color: white;
     }
 
+    .status-paused {
+      background: #6c757d;
+      color: white;
+    }
+
     .empty-state {
       text-align: center;
       padding: 40px 20px;
@@ -327,8 +332,9 @@
     <div class="main">
       <!-- 左侧：创建任务表单 -->
       <div class="card">
-        <h2>📝 创建新任务</h2>
+        <h2 id="formTitle">📝 创建新任务</h2>
         <form id="taskForm">
+          <input type="hidden" id="editingTaskId">
           <div class="form-group">
             <label for="title">任务标题 *</label>
             <input type="text" id="title" placeholder="例如：拍摄抖音视频" required>
@@ -366,7 +372,8 @@
             <input type="datetime-local" id="targetTime">
           </div>
 
-          <button type="submit">➕ 添加任务</button>
+          <button type="submit" id="submitBtn">➕ 添加任务</button>
+          <button type="button" id="cancelEditBtn" class="secondary" style="display:none;">❌ 取消编辑</button>
         </form>
       </div>
 
@@ -412,18 +419,31 @@
     const totalTasksEl = document.getElementById('totalTasks');
     const completedTasksEl = document.getElementById('completedTasks');
     const pendingTasksEl = document.getElementById('pendingTasks');
+    const editingTaskIdInput = document.getElementById('editingTaskId');
+    const formTitle = document.getElementById('formTitle');
+    const submitBtn = document.getElementById('submitBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
 
     // 初始化
     document.addEventListener('DOMContentLoaded', () => {
       loadTasks();
-      // 设置默认时间为2小时后
-      const now = new Date();
-      now.setHours(now.getHours() + 2);
-      targetTimeInput.value = now.toISOString().slice(0, 16);
+      setDefaultTargetTime();
+      cancelEditBtn.addEventListener('click', cancelEdit);
 
       // 每30秒刷新一次任务列表
       setInterval(loadTasks, 30000);
     });
+
+    // 设置计划时间为当前时间+10分钟
+    function setDefaultTargetTime() {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() + 10);
+
+      // datetime-local 需要本地时间字符串，不能直接用 UTC 的 toISOString
+      const tzOffset = now.getTimezoneOffset() * 60000;
+      const local = new Date(now.getTime() - tzOffset);
+      targetTimeInput.value = local.toISOString().slice(0, 16);
+    }
 
     // 加载任务列表
     async function loadTasks() {
@@ -468,8 +488,13 @@
           ${task.description ? `<div class="task-description">${escapeHtml(task.description)}</div>` : ''}
 
           <div class="task-actions">
-            ${task.status !== 'completed' ? `
+            ${task.status === 'pending' ? `
               <button class="secondary" onclick="remindTask('${task.id}')">🔔 提醒我</button>
+              <button class="secondary" onclick="pauseReminder('${task.id}')">⏸ 暂停提醒</button>
+              <button class="secondary" onclick="completeTask('${task.id}')">✓ 完成</button>
+              <button class="secondary" onclick="editTask('${task.id}')">✏️ 编辑</button>
+            ` : task.status === 'paused' ? `
+              <button class="secondary" onclick="resumeReminder('${task.id}')">▶️ 恢复提醒</button>
               <button class="secondary" onclick="completeTask('${task.id}')">✓ 完成</button>
               <button class="secondary" onclick="editTask('${task.id}')">✏️ 编辑</button>
             ` : `
@@ -485,17 +510,18 @@
     // 更新统计信息
     function updateStats(tasks) {
       const completed = tasks.filter(t => t.status === 'completed').length;
-      const pending = tasks.filter(t => t.status === 'pending').length;
+      const pending = tasks.filter(t => t.status === 'pending' || t.status === 'paused').length;
 
       totalTasksEl.textContent = tasks.length;
       completedTasksEl.textContent = completed;
       pendingTasksEl.textContent = pending;
     }
 
-    // 创建任务
+    // 创建或更新任务
     taskForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
+      const editingTaskId = editingTaskIdInput.value;
       const task = {
         title: titleInput.value,
         description: descriptionInput.value,
@@ -505,23 +531,37 @@
       };
 
       try {
-        const response = await fetch(`${API_BASE}/tasks`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(task),
-        });
+        if (editingTaskId) {
+          // 更新任务
+          const response = await fetch(`${API_BASE}/tasks/${editingTaskId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(task),
+          });
 
-        if (response.ok) {
-          taskForm.reset();
-          const now = new Date();
-          now.setHours(now.getHours() + 2);
-          targetTimeInput.value = now.toISOString().slice(0, 16);
-          await loadTasks();
-          showNotification('✅ 任务创建成功！');
+          if (response.ok) {
+            cancelEdit();
+            await loadTasks();
+            showNotification('✏️ 任务已更新');
+          }
+        } else {
+          // 创建新任务
+          const response = await fetch(`${API_BASE}/tasks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(task),
+          });
+
+          if (response.ok) {
+            taskForm.reset();
+            setDefaultTargetTime();
+            await loadTasks();
+            showNotification('✅ 任务创建成功！');
+          }
         }
       } catch (error) {
-        console.error('创建任务失败:', error);
-        showNotification('❌ 创建失败');
+        console.error('操作失败:', error);
+        showNotification('❌ 操作失败');
       }
     });
 
@@ -556,7 +596,39 @@
       }
     }
 
-    // 编辑任务
+    // 暂停自动提醒
+    async function pauseReminder(taskId) {
+      try {
+        await fetch(`${API_BASE}/tasks/${taskId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'paused' }),
+        });
+        await loadTasks();
+        showNotification('⏸ 已暂停自动提醒');
+      } catch (error) {
+        console.error('暂停提醒失败:', error);
+        showNotification('❌ 暂停失败');
+      }
+    }
+
+    // 恢复自动提醒
+    async function resumeReminder(taskId) {
+      try {
+        await fetch(`${API_BASE}/tasks/${taskId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'pending' }),
+        });
+        await loadTasks();
+        showNotification('▶️ 已恢复自动提醒');
+      } catch (error) {
+        console.error('恢复提醒失败:', error);
+        showNotification('❌ 恢复失败');
+      }
+    }
+
+    // 编辑任务 - 将任务信息回显到表单中
     async function editTask(taskId) {
       try {
         const response = await fetch(`${API_BASE}/tasks?status=all`);
@@ -568,62 +640,42 @@
           return;
         }
 
-        const nextTitle = prompt('编辑任务标题', task.title);
-        if (nextTitle === null) return;
-        const title = nextTitle.trim();
-        if (!title) {
-          showNotification('❌ 标题不能为空');
-          return;
+        // 回显任务数据到表单
+        editingTaskIdInput.value = taskId;
+        titleInput.value = task.title;
+        descriptionInput.value = task.description || '';
+        categorySelect.value = task.category || '其他';
+        prioritySelect.value = task.priority || 2;
+
+        // 转换时间格式为 datetime-local 格式
+        if (task.target_time) {
+          const date = new Date(task.target_time);
+          targetTimeInput.value = date.toISOString().slice(0, 16);
+        } else {
+          setDefaultTargetTime();
         }
 
-        const description = prompt('编辑任务描述', task.description || '');
-        if (description === null) return;
+        // 更新表单标题和按钮
+        formTitle.textContent = '✏️ 编辑任务';
+        submitBtn.textContent = '💾 保存修改';
+        cancelEditBtn.style.display = 'block';
 
-        const category = prompt('编辑任务分类', task.category || '其他');
-        if (category === null) return;
-
-        const priorityInput = prompt('编辑优先级（1=低, 2=中, 3=高）', String(task.priority || 2));
-        if (priorityInput === null) return;
-        const priority = Number(priorityInput);
-        if (!Number.isInteger(priority) || priority < 1 || priority > 3) {
-          showNotification('❌ 优先级必须是 1-3');
-          return;
-        }
-
-        const targetTimeInput = prompt(
-          '编辑计划时间（格式：YYYY-MM-DDTHH:mm:ss.sssZ）',
-          task.target_time || ''
-        );
-        if (targetTimeInput === null) return;
-
-        let target_time = null;
-        if (targetTimeInput.trim()) {
-          const date = new Date(targetTimeInput.trim());
-          if (Number.isNaN(date.getTime())) {
-            showNotification('❌ 时间格式无效');
-            return;
-          }
-          target_time = date.toISOString();
-        }
-
-        await fetch(`${API_BASE}/tasks/${taskId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title,
-            description,
-            category,
-            priority,
-            target_time,
-          }),
-        });
-
-        await loadTasks();
-        showNotification('✏️ 任务已更新');
+        // 滚动到表单
+        taskForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } catch (error) {
         console.error('编辑任务失败:', error);
         showNotification('❌ 编辑失败');
       }
+    }
+
+    // 取消编辑
+    function cancelEdit() {
+      editingTaskIdInput.value = '';
+      taskForm.reset();
+      setDefaultTargetTime();
+      formTitle.textContent = '📝 创建新任务';
+      submitBtn.textContent = '➕ 添加任务';
+      cancelEditBtn.style.display = 'none';
     }
 
     // 提醒任务
@@ -663,7 +715,7 @@
     }
 
     function getStatusLabel(status) {
-      const labels = { pending: '待处理', completed: '已完成' };
+      const labels = { pending: '待处理', paused: '已暂停提醒', completed: '已完成' };
       return labels[status] || status;
     }
 

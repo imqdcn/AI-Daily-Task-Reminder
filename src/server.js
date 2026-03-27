@@ -21,7 +21,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// 定时检查任务提醒（每60秒检查一次）
+// 定时检查任务提醒（每60秒检查一次，到点自动提醒）
 let reminderInterval = null;
 
 /**
@@ -137,7 +137,7 @@ app.patch('/api/tasks/:id', async (req, res) => {
     }
 
     if (Object.prototype.hasOwnProperty.call(updates, 'status')) {
-      if (!['pending', 'completed'].includes(updates.status)) {
+      if (!['pending', 'paused', 'completed'].includes(updates.status)) {
         return res.status(400).json({ error: '状态值无效' });
       }
 
@@ -145,7 +145,7 @@ app.patch('/api/tasks/:id', async (req, res) => {
         updates.completed_at = new Date().toISOString();
       }
 
-      if (updates.status === 'pending') {
+      if (updates.status === 'pending' || updates.status === 'paused') {
         updates.completed_at = null;
       }
     }
@@ -207,7 +207,7 @@ async function start() {
       console.log(`✅ 服务器运行在 http://localhost:${PORT}`);
       console.log('启动定时提醒检查...');
       startReminderCheck();
-      console.log('✅ 定时提醒检查已启动（间隔60秒）');
+      console.log('✅ 定时提醒检查已启动（间隔60秒，到点自动提醒）');
     });
   } catch (error) {
     console.error('启动失败:', error);

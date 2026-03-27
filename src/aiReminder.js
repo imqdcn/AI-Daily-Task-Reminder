@@ -46,10 +46,6 @@ async function requestGeminiContent(promptText) {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: promptText,
-        config: {
-          temperature: 0.7,
-          maxOutputTokens: 300,
-        },
       });
 
       return response.text || '';
@@ -185,18 +181,18 @@ async function checkAndRemindTasks(tasks) {
   const results = [];
 
   for (const task of tasks) {
-    if (task.status === 'completed') continue;
+    if (task.status !== 'pending') continue;
 
-    // 检查是否到了提醒时间（计划时间前5分钟）
+    // 检查是否到了提醒时间（到点或超过计划时间）
     if (task.target_time) {
       const targetTime = new Date(task.target_time);
-      const timeDiff = targetTime - now;
-      const fiveMinutes = 5 * 60 * 1000;
+      if (Number.isNaN(targetTime.getTime())) continue;
 
-      if (timeDiff > 0 && timeDiff <= fiveMinutes) {
-        const result = await processTaskReminder(task);
-        results.push(result);
-      }
+      const isDue = now >= targetTime;
+      if (!isDue) continue;
+
+      const result = await processTaskReminder(task);
+      results.push(result);
     }
   }
 
