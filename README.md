@@ -1,6 +1,6 @@
 # AI Daily Task Reminder
 
-一个为社媒博主打造的 AI 驱动的日程管理和提醒系统。通过 OpenAI 的自然语言能力，为你的每日任务生成智能提醒和执行建议。
+一个为社媒博主打造的 AI 驱动的日程管理和提醒系统。通过 Gemini API 的自然语言能力，为你的每日任务生成智能提醒和执行建议。
 
 ## 🎯 核心功能
 
@@ -16,7 +16,7 @@
 
 - **后端**：Node.js + Express
 - **数据库**：SQLite3
-- **AI**：OpenAI API (GPT-3.5-turbo)
+- **AI**：Gemini API (`@google/genai`)
 - **通知**：node-notifier (系统通知)
 - **前端**：原生 HTML/CSS/JavaScript
 
@@ -24,9 +24,9 @@
 
 ### 前置要求
 
-- Node.js 16+
+- Node.js 20+
 - npm 或 yarn
-- OpenAI API Key（[免费获取](https://platform.openai.com/api-keys)）
+- Gemini API Key（[获取](https://ai.google.dev/gemini-api/docs/api-key)）
 
 ### 安装步骤
 
@@ -45,8 +45,8 @@
    # 复制示例文件
    copy .env.example .env
    
-   # 编辑 .env 文件，添加你的 OpenAI API Key
-   # OPENAI_API_KEY=your_openai_api_key_here
+   # 编辑 .env 文件，添加你的 Gemini API Key
+   # GEMINI_API_KEY=your_gemini_api_key_here
    ```
 
 4. **启动应用**
@@ -228,7 +228,7 @@ npm run dev
 
 ## 🐛 故障排除
 
-### 问题：无法连接到 OpenAI API
+### 问题：无法连接到 Gemini API
 - **原因**：API Key 无效或网络问题
 - **解决**：检查 `.env` 中的 API Key 是否正确
 
@@ -245,7 +245,7 @@ npm run dev
 ## 📝 常见问题
 
 ### Q: 支持离线使用吗？
-A: 基础任务管理支持离线，但 AI 提醒需要网络连接和 OpenAI API。
+A: 基础任务管理支持离线，但 AI 提醒需要网络连接和 Gemini API。
 
 ### Q: 能否导出数据？
 A: 目前数据保存在 SQLite 中，可以直接备份 `data/tasks.db` 文件。

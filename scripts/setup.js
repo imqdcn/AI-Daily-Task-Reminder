@@ -21,14 +21,14 @@ if (!fs.existsSync(envFile)) {
   console.log('❌ 未找到 .env 文件');
   console.log('请运行以下命令创建配置：');
   console.log('  cp .env.example .env');
-  console.log('然后编辑 .env 文件，填入你的 OpenAI API Key\n');
+  console.log('然后编辑 .env 文件，填入你的 Gemini API Key\n');
   process.exit(1);
 }
 
-// 2. 检查 OPENAI_API_KEY
+// 2. 检查 GEMINI_API_KEY
 const envContent = fs.readFileSync(envFile, 'utf-8');
-if (!envContent.includes('sk-') || envContent.includes('your_openai_api_key')) {
-  console.log('⚠️  警告：OpenAI API Key 未配置或配置不正确');
+if (!envContent.includes('GEMINI_API_KEY=') || envContent.includes('your_gemini_api_key')) {
+  console.log('⚠️  警告：Gemini API Key 未配置或配置不正确');
   console.log('AI 提醒功能需要有效的 API Key\n');
 }
 

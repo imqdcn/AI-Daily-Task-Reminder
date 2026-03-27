@@ -1,10 +1,10 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 const notifier = require('node-notifier');
 const { v4: uuidv4 } = require('uuid');
 const { addReminder } = require('./db');
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+const ai = new GoogleGenAI({apiKey: GEMINI_API_KEY});
 
 const MAX_RETRIES = 2;
 const RETRY_BASE_DELAY_MS = 800;
@@ -43,20 +43,16 @@ async function requestGeminiContent(promptText) {
 
   for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
     try {
-      const result = await model.generateContent({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: promptText }],
-          },
-        ],
-        generationConfig: {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: promptText,
+        config: {
           temperature: 0.7,
           maxOutputTokens: 300,
         },
       });
 
-      return result.response.text();
+      return response.text || '';
     } catch (error) {
       lastError = error;
       logGeminiError(error, attempt);

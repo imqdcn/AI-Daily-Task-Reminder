@@ -2,13 +2,15 @@
 
 ## 前置准备
 
-### 1. 获取 OpenAI API Key
-访问 https://platform.openai.com/api-keys 获取免费的 API Key
+- Node.js 20+
+
+### 1. 获取 Gemini API Key
+访问 https://ai.google.dev/gemini-api/docs/api-key 获取 API Key
 
 ### 2. 配置环境变量
 ```bash
 # 编辑 .env 文件
-OPENAI_API_KEY=sk-your-key-here
+GEMINI_API_KEY=your-gemini-key-here
 PORT=3000
 NODE_ENV=development
 ```
@@ -43,40 +45,29 @@ npm start
 ### 2️⃣ 获取 AI 提醒
 **自动方式**：系统每 60 秒检查一次，在计划时间前 5 分钟自动发送提醒
 **手动方式**：点击任务卡片上的「🔔 提醒我」按钮立即获取
-
 ### 3️⃣ 管理任务
 - ✓ 完成：标记任务为已完成
-- 🗑 删除：移除任务
 - 📊 统计：顶部显示任务统计
 
-## 常见分类
 
 - 📹 **内容创作** - 拍摄、录制、剪辑视频
-- 🎨 **素材准备** - 准备背景、道具、文案
 - ✂️ **视频剪辑** - 后期处理和特效
 - 📡 **直播** - 直播预计划和互动
 - 📊 **数据分析** - 查看粉丝增长、互动数据
 - 💬 **互动运营** - 回复评论、回访粉丝
-- 📝 **其他** - 其他相关工作
-
 ## 优先级说明
 
+### 错误：GEMINI_API_KEY not found
 | 优先级 | 标记 | 用途 |
 |--------|------|------|
 | 🔴 高 | 3 | 重要且紧急的任务 |
 | 🟡 中 | 2 | 重要任务（默认） |
-| 🟢 低 | 1 | 不紧急的任务 |
-
 ## 示例工作流
 
 ### 早上 9:00 - 制定计划
 ```
 任务1: 拍摄新视频
-- 时间: 14:00
-- 分类: 内容创作
-- 优先级: 高
 
-任务2: 准备文案
 - 时间: 11:00
 - 分类: 素材准备
 - 优先级: 中
@@ -144,7 +135,7 @@ curl -X DELETE http://localhost:3000/api/tasks/{task_id}
 - 问题：数据目录不存在
 - 解决：确保运行过 `npm start` 一次
 
-### 错误：OPENAI_API_KEY not found
+### 错误：GEMINI_API_KEY not found
 - 问题：.env 文件不存在或未配置
 - 解决：创建 .env 文件并填入 API Key
 

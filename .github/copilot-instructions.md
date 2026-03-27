@@ -6,7 +6,7 @@
 ## 技术栈
 - **后端**: Node.js + Express
 - **数据库**: SQLite3  
-- **AI**: OpenAI API (GPT-3.5-turbo)
+- **AI**: Gemini API (`@google/genai`)
 - **通知**: node-notifier (系统通知)
 - **前端**: HTML/CSS/JavaScript
 
@@ -48,7 +48,7 @@ SQLite 两个主表：
 ## 开发注意事项
 
 ### 环境配置
-- 必须设置 `OPENAI_API_KEY` 环境变量
+- 必须设置 `GEMINI_API_KEY` 环境变量
 - 使用 `.env` 文件，参考 `.env.example`
 
 ### 提醒生成优化
@@ -83,7 +83,7 @@ SQLite 两个主表：
 ## 部署建议
 - 使用进程管理器（如 PM2）保持服务运行
 - 定期备份 SQLite 数据库文件
-- 监控 OpenAI API 使用配额和成本
+- 监控 Gemini API 使用配额和成本
 - 考虑添加日志记录到文件而非仅控制台
 
 ## 缩写和快捷方式
